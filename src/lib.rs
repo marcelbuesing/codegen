@@ -109,6 +109,7 @@ struct TypeDef {
     vis: Option<String>,
     docs: Option<Docs>,
     derive: Vec<String>,
+    repr: Option<String>,
     bounds: Vec<Bound>,
 }
 
@@ -695,6 +696,12 @@ impl Struct {
         self
     }
 
+    /// Specify representation.
+    pub fn repr(&mut self, repr: &str) -> &mut Self {
+        self.type_def.repr(repr);
+        self
+    }
+
     /// Add a named field to the struct.
     ///
     /// A struct can either set named fields with this function or tuple fields
@@ -896,6 +903,12 @@ impl Enum {
         self
     }
 
+    /// Specify representation.
+    pub fn repr(&mut self, repr: &str) -> &mut Self {
+        self.type_def.repr(repr);
+        self
+    }
+
     /// Push a variant to the enum, returning a mutable reference to it.
     pub fn new_variant(&mut self, name: &str) -> &mut Variant {
         self.push_variant(Variant::new(name));
@@ -1055,6 +1068,7 @@ impl TypeDef {
             vis: None,
             docs: None,
             derive: vec![],
+            repr: None,
             bounds: vec![],
         }
     }
@@ -1080,6 +1094,10 @@ impl TypeDef {
         self.derive.push(name.to_string());
     }
 
+    fn repr(&mut self, repr: &str) {
+        self.repr = Some(repr.to_string());
+    }
+
     fn fmt_head(&self,
                 keyword: &str,
                 parents: &[Type],
@@ -1090,6 +1108,7 @@ impl TypeDef {
         }
 
         self.fmt_derive(fmt)?;
+        self.fmt_repr(fmt)?;
 
         if let Some(ref vis) = self.vis {
             write!(fmt, "{} ", vis)?;
@@ -1111,6 +1130,14 @@ impl TypeDef {
         }
 
         fmt_bounds(&self.bounds, fmt)?;
+
+        Ok(())
+    }
+
+    fn fmt_repr(&self, fmt: &mut Formatter) -> fmt::Result {
+        if let Some(ref repr) = self.repr {
+            write!(fmt, "#[repr({})]\n", repr)?;
+        }
 
         Ok(())
     }

@@ -1,6 +1,6 @@
 extern crate codegen;
 
-use codegen::Scope;
+use codegen::{Scope, Variant};
 
 #[test]
 fn empty_scope() {
@@ -76,6 +76,25 @@ fn struct_with_derive() {
 struct Foo {
     one: usize,
     two: String,
+}"#;
+
+    assert_eq!(scope.to_string(), &expect[1..]);
+}
+
+#[test]
+fn struct_with_repr() {
+    let mut scope = Scope::new();
+
+    scope.new_struct("Foo")
+        .repr("C")
+        .field("one", "u8")
+        .field("two", "u8");
+
+    let expect = r#"
+#[repr(C)]
+struct Foo {
+    one: u8,
+    two: u8,
 }"#;
 
     assert_eq!(scope.to_string(), &expect[1..]);
@@ -251,6 +270,25 @@ mod foo {
     assert_eq!(scope.to_string(), &expect[1..]);
 }
 
+#[test]
+fn enum_with_repr() {
+    let mut scope = Scope::new();
+
+    scope.new_enum("IpAddrKind")
+        .repr("u8")
+        .push_variant(Variant::new("V4"))
+        .push_variant(Variant::new("V6"))
+        ;
+
+    let expect = r#"
+#[repr(u8)]
+enum IpAddrKind {
+    V4,
+    V6,
+}"#;
+
+    assert_eq!(scope.to_string(), &expect[1..]);
+}
 
 #[test]
 fn scoped_imports() {
