@@ -50,6 +50,7 @@ enum Item {
     Struct(Struct),
     Trait(Trait),
     Enum(Enum),
+    Const(Const),
     Impl(Impl),
     Raw(String),
 }
@@ -205,6 +206,23 @@ pub struct Function {
 
     /// Body contents
     body: Option<Vec<Body>>,
+}
+
+/// Defines a Const.
+#[derive(Debug, Clone)]
+pub struct Const {
+
+    /// Name of Const
+    name: String,
+
+    /// Type of Const
+    ty: Type,
+
+    /// Value of Const
+    value: String,
+
+    /// Visibility
+    vis: Option<String>,
 }
 
 /// Defines a code block. This is used to define a function body.
@@ -394,6 +412,12 @@ impl Scope {
         self
     }
 
+    /// Push a Const definition
+    pub fn push_const(&mut self, item: Const) -> &mut Self {
+        self.items.push(Item::Const(item));
+        self
+    }
+
     /// Push a new `impl` block, returning a mutable reference to it.
     pub fn new_impl(&mut self, target: &str) -> &mut Impl {
         self.push_impl(Impl::new(target));
@@ -450,6 +474,7 @@ impl Scope {
                 Item::Struct(ref v) => v.fmt(fmt)?,
                 Item::Trait(ref v) => v.fmt(fmt)?,
                 Item::Enum(ref v) => v.fmt(fmt)?,
+                Item::Const(ref v) => v.fmt(fmt)?,
                 Item::Impl(ref v) => v.fmt(fmt)?,
                 Item::Raw(ref v) => {
                     write!(fmt, "{}\n", v)?;
@@ -621,6 +646,12 @@ impl Module {
     /// Push an enum definition
     pub fn push_enum(&mut self, item: Enum) -> &mut Self {
         self.scope.push_enum(item);
+        self
+    }
+
+    /// Push a Const definition
+    pub fn push_const(&mut self, item: Const) -> &mut Self {
+        self.scope.push_const(item);
         self
     }
 
@@ -1581,6 +1612,43 @@ impl Function {
                 write!(fmt, ";\n")
             }
         }
+    }
+}
+
+// ===== impl Const =====
+
+impl Const {
+
+    /// Returns a new Const.
+    pub fn new<T>(name: &str, ty: T, value: String) -> Self
+    where T: Into<Type> {
+        Const {
+            name: name.to_string(),
+            ty: ty.into(),
+            value,
+            vis: None,
+        }
+    }
+
+    /// Set the Const's visibility.
+    pub fn vis(&mut self, vis: &str) -> &mut Self {
+        self.vis = Some(vis.to_string());
+        self
+    }
+
+    /// Formats the Const using the given formatter.
+    pub fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        if let Some(ref vis) = self.vis {
+            write!(fmt, "{} ", vis)?;
+        }
+
+        write!(fmt, "const {}: ", self.name)?;
+
+        self.ty.fmt(fmt)?;
+
+        write!(fmt, " = {};\n", self.value)?;
+
+        Ok(())
     }
 }
 
