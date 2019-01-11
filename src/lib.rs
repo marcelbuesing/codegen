@@ -111,6 +111,7 @@ struct TypeDef {
     docs: Option<Docs>,
     derive: Vec<String>,
     repr: Option<String>,
+    allow: Option<String>,
     bounds: Vec<Bound>,
 }
 
@@ -186,6 +187,9 @@ pub struct Function {
     /// Function documentation
     docs: Option<Docs>,
 
+    /// A lint attribute used to suppress a warning or error
+    allow: Option<String>,
+
     /// Function visibility
     vis: Option<String>,
 
@@ -220,6 +224,9 @@ pub struct Const {
 
     /// Value of Const
     value: String,
+
+    /// A lint attribute used to suppress a warning or error
+    allow: Option<String>,
 
     /// Visibility
     vis: Option<String>,
@@ -733,6 +740,12 @@ impl Struct {
         self
     }
 
+    /// Specify lint attribute to supress a warning or error.
+    pub fn allow(&mut self, allow: &str) -> &mut Self {
+        self.type_def.allow(allow);
+        self
+    }
+
     /// Add a named field to the struct.
     ///
     /// A struct can either set named fields with this function or tuple fields
@@ -940,6 +953,12 @@ impl Enum {
         self
     }
 
+    /// Specify lint attribute to supress a warning or error.
+    pub fn allow(&mut self, allow: &str) -> &mut Self {
+        self.type_def.allow(allow);
+        self
+    }
+
     /// Push a variant to the enum, returning a mutable reference to it.
     pub fn new_variant(&mut self, name: &str) -> &mut Variant {
         self.push_variant(Variant::new(name));
@@ -1100,6 +1119,7 @@ impl TypeDef {
             docs: None,
             derive: vec![],
             repr: None,
+            allow: None,
             bounds: vec![],
         }
     }
@@ -1129,6 +1149,10 @@ impl TypeDef {
         self.repr = Some(repr.to_string());
     }
 
+    fn allow(&mut self, allow: &str) {
+        self.allow = Some(allow.to_string());
+    }
+
     fn fmt_head(&self,
                 keyword: &str,
                 parents: &[Type],
@@ -1138,6 +1162,7 @@ impl TypeDef {
             docs.fmt(fmt)?;
         }
 
+        self.fmt_allow(fmt)?;
         self.fmt_derive(fmt)?;
         self.fmt_repr(fmt)?;
 
@@ -1168,6 +1193,14 @@ impl TypeDef {
     fn fmt_repr(&self, fmt: &mut Formatter) -> fmt::Result {
         if let Some(ref repr) = self.repr {
             write!(fmt, "#[repr({})]\n", repr)?;
+        }
+
+        Ok(())
+    }
+
+    fn fmt_allow(&self, fmt: &mut Formatter) -> fmt::Result {
+        if let Some(ref allow) = self.allow {
+            write!(fmt, "#[allow({})]\n", allow)?;
         }
 
         Ok(())
@@ -1458,6 +1491,7 @@ impl Function {
         Function {
             name: name.to_string(),
             docs: None,
+            allow: None,
             vis: None,
             generics: vec![],
             arg_self: None,
@@ -1471,6 +1505,12 @@ impl Function {
     /// Set the function documentation.
     pub fn doc(&mut self, docs: &str) -> &mut Self {
         self.docs = Some(Docs::new(docs));
+        self
+    }
+
+    /// Specify lint attribute to supress a warning or error.
+    pub fn allow(&mut self, allow: &str) -> &mut Self {
+        self.allow = Some(allow.to_string());
         self
     }
 
@@ -1559,6 +1599,10 @@ impl Function {
             docs.fmt(fmt)?;
         }
 
+        if let Some(ref allow) = self.allow {
+            write!(fmt, "#[allow({})]\n", allow)?;
+        }
+
         if is_trait {
             assert!(self.vis.is_none(), "trait fns do not have visibility modifiers");
         }
@@ -1626,6 +1670,7 @@ impl Const {
             name: name.to_string(),
             ty: ty.into(),
             value,
+            allow: None,
             vis: None,
         }
     }
@@ -1636,8 +1681,18 @@ impl Const {
         self
     }
 
+    /// Specify lint attribute to supress a warning or error.
+    pub fn allow(&mut self, allow: &str) -> &mut Self {
+        self.allow = Some(allow.to_string());
+        self
+    }
+
     /// Formats the Const using the given formatter.
     pub fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+        if let Some(ref allow) = self.allow {
+            write!(fmt, "#[allow({})]\n ", allow)?;
+        }
+
         if let Some(ref vis) = self.vis {
             write!(fmt, "{} ", vis)?;
         }
